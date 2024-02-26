@@ -2,7 +2,7 @@
 
 `emu` is an experimental Bitcoin emulator running as a smart contract on Algorand.
 
-## How to Mine EMU on the TestNet
+# How to Mine EMU on the TestNet
 
 To mine EMU on the Algorand TestNet:
 
@@ -14,9 +14,21 @@ To mine EMU on the Algorand TestNet:
 - Run `python -m emu chain` in the terminal. You should see the latest block printed.
 - Run `python -m emu mine` to start mining!
 
+`.env.emu` has key information about the application and asset on the TestNet:
+
+```
+NETWORK='testnet'
+CREATOR='UXKBYZCQ5G2X7DPCJRL2G7SUVL4RF4T42JJZ3R2PKBLZPSASKQ3MJIJO3A'
+APP_ID='599729556'
+APP_ADDRESS='F65JKJURNT6M5EUYNFJUWZM7D3IRIZ45WU3BTHAGLUKUUIZ6QKU5WOSIXM'
+ASSET_ID='599729892'
+```
+
+# AlgoKit Template Information
+
 This project has been generated using AlgoKit. See below for default getting started instructions.
 
-# Setup
+## Setup
 
 ### Pre-requisites
 

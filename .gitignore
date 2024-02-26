@@ -129,7 +129,7 @@ env/
 !.env.template
 !.env.emu
 !.env.project
-!.env.vault
+# !.env.vault
 venv/
 ENV/
 env.bak/
@@ -179,9 +179,3 @@ node_modules
 
 # AlgoKit
 debug_traces/
-
-
-
-
-.env*
-.flaskenv*
