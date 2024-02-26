@@ -8,11 +8,6 @@ from algokit_utils import Account
 import emu.utils as utils
 from smart_contracts.artifacts.emulator.client import EmulatorClient
 
-# def test_says_hello(hello_world_client: HelloWorldClient) -> None:
-#     result = hello_world_client.hello(name="World")
-
-#     assert result.return_value == "Hello, World"
-
 
 def test_boostrap(app_client: EmulatorClient, creator: Account) -> None:
     """Test bootstrap_application()."""
