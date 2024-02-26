@@ -2,6 +2,8 @@
 
 `emu` is an experimental Bitcoin emulator running as a smart contract on Algorand.
 
+## Blog: [Building a Bitcoin Emulator on Algorand](https://alexandercodes.hashnode.dev/building-a-bitcoin-emulator-on-algorand)
+
 # How to Mine EMU on the TestNet
 
 To mine EMU on the Algorand TestNet:
