@@ -1,0 +1,756 @@
+#pragma version 10
+
+smart_contracts.emulator.contract.Emulator.approval_program:
+    txn ApplicationID
+    bnz main_entrypoint@2
+    callsub __init__
+
+main_entrypoint@2:
+    // smart_contracts/emulator/contract.py:122
+    // class Emulator(ARC4Contract):
+    txn NumAppArgs
+    bz main_bare_routing@8
+    method "bootstrap(pay)uint64"
+    method "mine(uint64,byte[])uint64"
+    txna ApplicationArgs 0
+    match main_bootstrap_route@4 main_mine_route@5
+    err // reject transaction
+
+main_bootstrap_route@4:
+    // smart_contracts/emulator/contract.py:145
+    // @arc4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/emulator/contract.py:122
+    // class Emulator(ARC4Contract):
+    txn GroupIndex
+    int 1
+    -
+    dup
+    gtxns TypeEnum
+    int pay
+    ==
+    assert // transaction type is pay
+    // smart_contracts/emulator/contract.py:145
+    // @arc4.abimethod()
+    callsub bootstrap
+    itob
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+main_mine_route@5:
+    // smart_contracts/emulator/contract.py:243
+    // @arc4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/emulator/contract.py:122
+    // class Emulator(ARC4Contract):
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    extract 2 0
+    // smart_contracts/emulator/contract.py:243
+    // @arc4.abimethod()
+    callsub mine
+    itob
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+main_bare_routing@8:
+    // smart_contracts/emulator/contract.py:122
+    // class Emulator(ARC4Contract):
+    txn OnCompletion
+    !
+    assert // reject transaction
+    txn ApplicationID
+    !
+    assert // is creating
+    int 1
+    return
+
+
+// smart_contracts.emulator.contract.Emulator.bootstrap(seed: uint64) -> uint64:
+bootstrap:
+    // smart_contracts/emulator/contract.py:145-146
+    // @arc4.abimethod()
+    // def bootstrap(self, seed: gtxn.PaymentTransaction) -> UInt64:
+    proto 1 1
+    // smart_contracts/emulator/contract.py:158
+    // assert not self.is_bootstrapped(), "Application has already been bootstrapped"
+    callsub is_bootstrapped
+    !
+    assert // Application has already been bootstrapped
+    // smart_contracts/emulator/contract.py:159
+    // assert Txn.sender == self.creator, "Only the creator may call this method"
+    txn Sender
+    int 0
+    byte "creator"
+    app_global_get_ex
+    assert // check value exists
+    ==
+    assert // Only the creator may call this method
+    // smart_contracts/emulator/contract.py:161
+    // seed.receiver == Global.current_application_address
+    frame_dig -1
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    // smart_contracts/emulator/contract.py:160-162
+    // assert (
+    //     seed.receiver == Global.current_application_address
+    // ), "Receiver must be app address"
+    assert // Receiver must be app address
+    // smart_contracts/emulator/contract.py:163
+    // assert Global.group_size == 2, "Group size must be 2"
+    global GroupSize
+    int 2
+    ==
+    assert // Group size must be 2
+    // smart_contracts/emulator/contract.py:164
+    // assert seed.amount >= 300_000, "Amount must be >= 3 Algos"  # 0.3 Algos
+    frame_dig -1
+    gtxns Amount
+    int 300000
+    >=
+    assert // Amount must be >= 3 Algos
+    // smart_contracts/emulator/contract.py:165
+    // self.asa = self.create_asset()
+    callsub create_asset
+    byte "asa"
+    swap
+    app_global_put
+    // smart_contracts/emulator/contract.py:166
+    // self.prev_retarget_time = self.time = Global.latest_timestamp
+    global LatestTimestamp
+    byte "time"
+    dig 1
+    app_global_put
+    byte "prev_retarget_time"
+    swap
+    app_global_put
+    // smart_contracts/emulator/contract.py:167
+    // return self.asa.asset_id
+    int 0
+    byte "asa"
+    app_global_get_ex
+    assert // check value exists
+    retsub
+
+
+// smart_contracts.emulator.contract.Emulator.is_bootstrapped() -> uint64:
+is_bootstrapped:
+    // smart_contracts/emulator/contract.py:133-134
+    // @subroutine
+    // def is_bootstrapped(self) -> bool:
+    proto 0 1
+    // smart_contracts/emulator/contract.py:143
+    // return bool(self.asa)
+    int 0
+    byte "asa"
+    app_global_get_ex
+    assert // check value exists
+    retsub
+
+
+// smart_contracts.emulator.contract.Emulator.create_asset() -> uint64:
+create_asset:
+    // smart_contracts/emulator/contract.py:204-205
+    // @subroutine
+    // def create_asset(self) -> Asset:
+    proto 0 1
+    // smart_contracts/emulator/contract.py:212-221
+    // itxn.AssetConfig(
+    //     asset_name=b"EMU",
+    //     unit_name=b"EMUSHIS",
+    //     total=MAX_MONEY,
+    //     decimals=DECIMALS,
+    //     manager=Global.current_application_address,
+    //     reserve=Global.current_application_address,
+    //     fee=0,
+    // )
+    // .submit()
+    itxn_begin
+    // smart_contracts/emulator/contract.py:217
+    // manager=Global.current_application_address,
+    global CurrentApplicationAddress
+    // smart_contracts/emulator/contract.py:218
+    // reserve=Global.current_application_address,
+    global CurrentApplicationAddress
+    // smart_contracts/emulator/contract.py:214
+    // unit_name=b"EMUSHIS",
+    byte "EMUSHIS"
+    itxn_field ConfigAssetUnitName
+    // smart_contracts/emulator/contract.py:212
+    // itxn.AssetConfig(
+    int acfg
+    itxn_field TypeEnum
+    // smart_contracts/emulator/contract.py:215
+    // total=MAX_MONEY,
+    int 2100000000000000
+    itxn_field ConfigAssetTotal
+    itxn_field ConfigAssetReserve
+    itxn_field ConfigAssetManager
+    // smart_contracts/emulator/contract.py:219
+    // fee=0,
+    int 0
+    itxn_field Fee
+    // smart_contracts/emulator/contract.py:216
+    // decimals=DECIMALS,
+    int 8
+    itxn_field ConfigAssetDecimals
+    // smart_contracts/emulator/contract.py:213
+    // asset_name=b"EMU",
+    byte "EMU"
+    itxn_field ConfigAssetName
+    // smart_contracts/emulator/contract.py:212-221
+    // itxn.AssetConfig(
+    //     asset_name=b"EMU",
+    //     unit_name=b"EMUSHIS",
+    //     total=MAX_MONEY,
+    //     decimals=DECIMALS,
+    //     manager=Global.current_application_address,
+    //     reserve=Global.current_application_address,
+    //     fee=0,
+    // )
+    // .submit()
+    itxn_submit
+    itxn CreatedAssetID
+    // smart_contracts/emulator/contract.py:211-223
+    // return (
+    //     itxn.AssetConfig(
+    //         asset_name=b"EMU",
+    //         unit_name=b"EMUSHIS",
+    //         total=MAX_MONEY,
+    //         decimals=DECIMALS,
+    //         manager=Global.current_application_address,
+    //         reserve=Global.current_application_address,
+    //         fee=0,
+    //     )
+    //     .submit()
+    //     .created_asset
+    // )
+    retsub
+
+
+// smart_contracts.emulator.contract.Emulator.mine(nonce: bytes, coinbase: bytes) -> uint64:
+mine:
+    // smart_contracts/emulator/contract.py:243-244
+    // @arc4.abimethod()
+    // def mine(self, nonce: arc4.UInt64, coinbase: Bytes) -> UInt64:
+    proto 2 1
+    // smart_contracts/emulator/contract.py:254
+    // assert self.is_bootstrapped(), "Application not bootstrapped"
+    callsub is_bootstrapped
+    assert // Application not bootstrapped
+    // smart_contracts/emulator/contract.py:257
+    // op.sha256(op.sha256(self.block_hash.bytes + nonce.bytes + coinbase))
+    int 0
+    byte "block_hash"
+    app_global_get_ex
+    assert // check value exists
+    frame_dig -2
+    concat
+    frame_dig -1
+    concat
+    sha256
+    sha256
+    // smart_contracts/emulator/contract.py:259
+    // assert proposed_block_hash < self.target, "Invalid block"
+    int 0
+    byte "target"
+    app_global_get_ex
+    assert // check value exists
+    dig 1
+    b>
+    assert // Invalid block
+    // smart_contracts/emulator/contract.py:261
+    // current_time = Global.latest_timestamp
+    global LatestTimestamp
+    dup
+    uncover 2
+    // smart_contracts/emulator/contract.py:262
+    // self.block_height += 1
+    int 0
+    byte "block_height"
+    app_global_get_ex
+    assert // check value exists
+    int 1
+    +
+    byte "block_height"
+    swap
+    app_global_put
+    // smart_contracts/emulator/contract.py:263
+    // self.block_hash = arc4.UInt256(proposed_block_hash)
+    dup
+    len
+    int 32
+    <=
+    assert // overflow
+    int 32
+    bzero
+    b|
+    byte "block_hash"
+    swap
+    app_global_put
+    // smart_contracts/emulator/contract.py:264
+    // self.coinbase = coinbase  # Store this in state just for fun
+    byte "coinbase"
+    frame_dig -1
+    app_global_put
+    // smart_contracts/emulator/contract.py:265
+    // self.time = current_time
+    byte "time"
+    swap
+    app_global_put
+    // smart_contracts/emulator/contract.py:266
+    // if self.should_adjust_difficulty():
+    callsub should_adjust_difficulty
+    byte 0x00
+    !=
+    bz mine_after_if_else@2
+    // smart_contracts/emulator/contract.py:267
+    // next_work = self.calculate_next_work_required()
+    callsub calculate_next_work_required
+    // smart_contracts/emulator/contract.py:270
+    // current_time,
+    frame_dig 0
+    dup
+    cover 2
+    itob
+    byte "retargeted_at\x1f"
+    swap
+    concat
+    // smart_contracts/emulator/contract.py:277
+    // sep=b"\x1F",
+    byte "\x1f"
+    // smart_contracts/emulator/contract.py:271
+    // "prev_retarget_time",
+    concat
+    byte "prev_retarget_time"
+    concat
+    // smart_contracts/emulator/contract.py:277
+    // sep=b"\x1F",
+    byte "\x1f"
+    // smart_contracts/emulator/contract.py:272
+    // self.prev_retarget_time,
+    concat
+    int 0
+    byte "prev_retarget_time"
+    app_global_get_ex
+    assert // check value exists
+    itob
+    concat
+    // smart_contracts/emulator/contract.py:277
+    // sep=b"\x1F",
+    byte "\x1f"
+    // smart_contracts/emulator/contract.py:273
+    // "prev_target",
+    concat
+    byte "prev_target"
+    concat
+    // smart_contracts/emulator/contract.py:277
+    // sep=b"\x1F",
+    byte "\x1f"
+    // smart_contracts/emulator/contract.py:274
+    // self.target,
+    concat
+    int 0
+    byte "target"
+    app_global_get_ex
+    assert // check value exists
+    concat
+    // smart_contracts/emulator/contract.py:277
+    // sep=b"\x1F",
+    byte "\x1f"
+    // smart_contracts/emulator/contract.py:275
+    // "new_target",
+    concat
+    byte "new_target"
+    concat
+    // smart_contracts/emulator/contract.py:277
+    // sep=b"\x1F",
+    byte "\x1f"
+    // smart_contracts/emulator/contract.py:276
+    // next_work,
+    concat
+    dig 1
+    concat
+    // smart_contracts/emulator/contract.py:268-278
+    // log(
+    //     "retargeted_at",
+    //     current_time,
+    //     "prev_retarget_time",
+    //     self.prev_retarget_time,
+    //     "prev_target",
+    //     self.target,
+    //     "new_target",
+    //     next_work,
+    //     sep=b"\x1F",
+    // )
+    log
+    // smart_contracts/emulator/contract.py:279
+    // self.prev_retarget_time = current_time
+    byte "prev_retarget_time"
+    uncover 2
+    app_global_put
+    // smart_contracts/emulator/contract.py:280
+    // self.target = next_work
+    byte "target"
+    swap
+    app_global_put
+
+mine_after_if_else@2:
+    // smart_contracts/emulator/contract.py:281
+    // reward = self.reward_miner()
+    callsub reward_miner
+    // smart_contracts/emulator/contract.py:284
+    // Txn.sender.bytes,
+    byte "miner\x1f"
+    txn Sender
+    concat
+    // smart_contracts/emulator/contract.py:287
+    // sep=b"\x1F",
+    byte "\x1f"
+    // smart_contracts/emulator/contract.py:285
+    // "reward",
+    concat
+    byte "reward"
+    concat
+    // smart_contracts/emulator/contract.py:287
+    // sep=b"\x1F",
+    byte "\x1f"
+    // smart_contracts/emulator/contract.py:286
+    // reward,
+    concat
+    dig 1
+    itob
+    concat
+    // smart_contracts/emulator/contract.py:282-288
+    // log(
+    //     "miner",
+    //     Txn.sender.bytes,
+    //     "reward",
+    //     reward,
+    //     sep=b"\x1F",
+    // )
+    log
+    // smart_contracts/emulator/contract.py:289
+    // return reward
+    swap
+    retsub
+
+
+// smart_contracts.emulator.contract.Emulator.should_adjust_difficulty() -> bytes:
+should_adjust_difficulty:
+    // smart_contracts/emulator/contract.py:169-170
+    // @subroutine
+    // def should_adjust_difficulty(self) -> arc4.Bool:
+    proto 0 1
+    // smart_contracts/emulator/contract.py:176
+    // return arc4.Bool(self.block_height % DIFFICULTY_ADJUSTMENT_INTERVAL == 0)
+    int 0
+    byte "block_height"
+    app_global_get_ex
+    assert // check value exists
+    int 360
+    %
+    !
+    byte 0x00
+    int 0
+    uncover 2
+    setbit
+    retsub
+
+
+// smart_contracts.emulator.contract.Emulator.calculate_next_work_required() -> bytes:
+calculate_next_work_required:
+    // smart_contracts/emulator/contract.py:178-179
+    // @subroutine
+    // def calculate_next_work_required(self) -> BigUInt:
+    proto 0 1
+    // smart_contracts/emulator/contract.py:186
+    // value=self.time - self.prev_retarget_time,
+    int 0
+    byte "time"
+    app_global_get_ex
+    assert // check value exists
+    int 0
+    byte "prev_retarget_time"
+    app_global_get_ex
+    assert // check value exists
+    -
+    // smart_contracts/emulator/contract.py:187
+    // lower_bound=UInt64(SMALLEST_TIMESPAN),
+    int 900
+    // smart_contracts/emulator/contract.py:188
+    // upper_bound=UInt64(LARGEST_TIMESPAN),
+    int 14400
+    // smart_contracts/emulator/contract.py:185-189
+    // timespan = clamp(
+    //     value=self.time - self.prev_retarget_time,
+    //     lower_bound=UInt64(SMALLEST_TIMESPAN),
+    //     upper_bound=UInt64(LARGEST_TIMESPAN),
+    // )
+    callsub clamp
+    // smart_contracts/emulator/contract.py:190
+    // new_target = self.target * (timespan * 1000 // POW_TARGET_TIMESPAN) // 1000
+    int 0
+    byte "target"
+    app_global_get_ex
+    swap
+    cover 2
+    assert // check value exists
+    int 1000
+    *
+    int 3600
+    /
+    itob
+    b*
+    byte 0x03e8
+    b/
+    dup
+    // smart_contracts/emulator/contract.py:191
+    // return new_target if new_target < POW_LIMIT else BigUInt(POW_LIMIT)
+    byte 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    b<
+    bz calculate_next_work_required_ternary_false@2
+    frame_dig 0
+    b calculate_next_work_required_ternary_merge@3
+
+calculate_next_work_required_ternary_false@2:
+    // smart_contracts/emulator/contract.py:191
+    // return new_target if new_target < POW_LIMIT else BigUInt(POW_LIMIT)
+    byte 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+
+calculate_next_work_required_ternary_merge@3:
+    // smart_contracts/emulator/contract.py:191
+    // return new_target if new_target < POW_LIMIT else BigUInt(POW_LIMIT)
+    swap
+    retsub
+
+
+// smart_contracts.emulator.contract.clamp(value: uint64, lower_bound: uint64, upper_bound: uint64) -> uint64:
+clamp:
+    // smart_contracts/emulator/contract.py:83-84
+    // @subroutine
+    // def clamp(value: UInt64, lower_bound: UInt64, upper_bound: UInt64) -> UInt64:
+    proto 3 1
+    // smart_contracts/emulator/contract.py:95
+    // return least(greatest(value, lower_bound), upper_bound)
+    frame_dig -3
+    frame_dig -2
+    callsub greatest
+    frame_dig -1
+    callsub least
+    retsub
+
+
+// smart_contracts.emulator.contract.greatest(a: uint64, b: uint64) -> uint64:
+greatest:
+    // smart_contracts/emulator/contract.py:69-70
+    // @subroutine
+    // def greatest(a: UInt64, b: UInt64) -> UInt64:
+    proto 2 1
+    // smart_contracts/emulator/contract.py:80
+    // return a if a > b else b
+    frame_dig -2
+    frame_dig -1
+    >
+    bz greatest_ternary_false@2
+    frame_dig -2
+    b greatest_ternary_merge@3
+
+greatest_ternary_false@2:
+    frame_dig -1
+
+greatest_ternary_merge@3:
+    // smart_contracts/emulator/contract.py:80
+    // return a if a > b else b
+    retsub
+
+
+// smart_contracts.emulator.contract.least(a: uint64, b: uint64) -> uint64:
+least:
+    // smart_contracts/emulator/contract.py:55-56
+    // @subroutine
+    // def least(a: UInt64, b: UInt64) -> UInt64:
+    proto 2 1
+    // smart_contracts/emulator/contract.py:66
+    // return a if a < b else b
+    frame_dig -2
+    frame_dig -1
+    <
+    bz least_ternary_false@2
+    frame_dig -2
+    b least_ternary_merge@3
+
+least_ternary_false@2:
+    frame_dig -1
+
+least_ternary_merge@3:
+    // smart_contracts/emulator/contract.py:66
+    // return a if a < b else b
+    retsub
+
+
+// smart_contracts.emulator.contract.Emulator.reward_miner() -> uint64:
+reward_miner:
+    // smart_contracts/emulator/contract.py:225-226
+    // @subroutine
+    // def reward_miner(self) -> UInt64:
+    proto 0 1
+    // smart_contracts/emulator/contract.py:233-239
+    // itxn.AssetTransfer(
+    //     xfer_asset=self.asa,
+    //     asset_amount=self.get_block_subsidy(),
+    //     asset_receiver=Txn.sender,
+    //     fee=0,
+    // )
+    // .submit()
+    itxn_begin
+    // smart_contracts/emulator/contract.py:235
+    // asset_amount=self.get_block_subsidy(),
+    callsub get_block_subsidy
+    // smart_contracts/emulator/contract.py:236
+    // asset_receiver=Txn.sender,
+    txn Sender
+    // smart_contracts/emulator/contract.py:234
+    // xfer_asset=self.asa,
+    int 0
+    byte "asa"
+    app_global_get_ex
+    assert // check value exists
+    itxn_field XferAsset
+    // smart_contracts/emulator/contract.py:233
+    // itxn.AssetTransfer(
+    int axfer
+    itxn_field TypeEnum
+    // smart_contracts/emulator/contract.py:237
+    // fee=0,
+    int 0
+    itxn_field Fee
+    itxn_field AssetReceiver
+    itxn_field AssetAmount
+    // smart_contracts/emulator/contract.py:233-239
+    // itxn.AssetTransfer(
+    //     xfer_asset=self.asa,
+    //     asset_amount=self.get_block_subsidy(),
+    //     asset_receiver=Txn.sender,
+    //     fee=0,
+    // )
+    // .submit()
+    itxn_submit
+    itxn AssetAmount
+    // smart_contracts/emulator/contract.py:232-241
+    // return (
+    //     itxn.AssetTransfer(
+    //         xfer_asset=self.asa,
+    //         asset_amount=self.get_block_subsidy(),
+    //         asset_receiver=Txn.sender,
+    //         fee=0,
+    //     )
+    //     .submit()
+    //     .asset_amount
+    // )
+    retsub
+
+
+// smart_contracts.emulator.contract.Emulator.get_block_subsidy() -> uint64:
+get_block_subsidy:
+    // smart_contracts/emulator/contract.py:193-194
+    // @subroutine
+    // def get_block_subsidy(self) -> UInt64:
+    proto 0 1
+    // smart_contracts/emulator/contract.py:200
+    // halvings = self.block_height // SUBSIDY_HALVING_INTERVAL
+    int 0
+    byte "block_height"
+    app_global_get_ex
+    assert // check value exists
+    int 210000
+    /
+    dup
+    // smart_contracts/emulator/contract.py:201-202
+    // # Force block reward to zero when right shift is undefined.
+    // return UInt64(0) if halvings >= 64 else SUBSIDY >> halvings
+    int 64
+    >=
+    bz get_block_subsidy_ternary_false@2
+    int 0
+    b get_block_subsidy_ternary_merge@3
+
+get_block_subsidy_ternary_false@2:
+    // smart_contracts/emulator/contract.py:201-202
+    // # Force block reward to zero when right shift is undefined.
+    // return UInt64(0) if halvings >= 64 else SUBSIDY >> halvings
+    int 5000000000
+    frame_dig 0
+    shr
+
+get_block_subsidy_ternary_merge@3:
+    // smart_contracts/emulator/contract.py:201-202
+    // # Force block reward to zero when right shift is undefined.
+    // return UInt64(0) if halvings >= 64 else SUBSIDY >> halvings
+    swap
+    retsub
+
+
+// smart_contracts.emulator.contract.Emulator.__init__() -> void:
+__init__:
+    // smart_contracts/emulator/contract.py:123
+    // def __init__(self) -> None:
+    proto 0 0
+    // smart_contracts/emulator/contract.py:124
+    // self.creator = Txn.sender
+    byte "creator"
+    txn Sender
+    app_global_put
+    // smart_contracts/emulator/contract.py:125
+    // self.asa = Asset(0)
+    byte "asa"
+    int 0
+    app_global_put
+    // smart_contracts/emulator/contract.py:126
+    // self.block_height = UInt64(GENESIS_BLOCK_HEIGHT)
+    byte "block_height"
+    int 0
+    app_global_put
+    // smart_contracts/emulator/contract.py:127
+    // self.block_hash = arc4.UInt256(GENESIS_BLOCK_HASH)
+    byte "block_hash"
+    byte 0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f
+    app_global_put
+    // smart_contracts/emulator/contract.py:128
+    // self.coinbase = Bytes()
+    byte "coinbase"
+    byte ""
+    app_global_put
+    // smart_contracts/emulator/contract.py:129
+    // self.prev_retarget_time = UInt64(0)
+    byte "prev_retarget_time"
+    int 0
+    app_global_put
+    // smart_contracts/emulator/contract.py:130
+    // self.time = UInt64(0)
+    byte "time"
+    int 0
+    app_global_put
+    // smart_contracts/emulator/contract.py:131
+    // self.target = BigUInt(POW_LIMIT)
+    byte "target"
+    byte 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    app_global_put
+    retsub

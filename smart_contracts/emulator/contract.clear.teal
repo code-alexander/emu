@@ -1,0 +1,7 @@
+#pragma version 10
+
+smart_contracts.emulator.contract.Emulator.clear_state_program:
+    // smart_contracts/emulator/contract.py:122
+    // class Emulator(ARC4Contract):
+    int 1
+    return
